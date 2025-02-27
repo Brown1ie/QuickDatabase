@@ -15,7 +15,7 @@ const Header: React.FC = () => {
           </div>
           <div>
             <a 
-              href="https://github.com" 
+              href="https://github.com/Brown1ie" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-white hover:text-blue-200 transition-colors"
