@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { PlusCircle, Download, Trash2, Save, Database, Edit } from 'lucide-react';
+import { PlusCircle, Download, Trash2, Save, Database, Edit, FileUp } from 'lucide-react';
 import DataTable from './components/DataTable';
 import Header from './components/Header';
 import PresetSelector from './components/PresetSelector';
+import ImportButton from './components/ImportButton';
 import { generatePDF } from './utils/pdfGenerator';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -220,6 +221,14 @@ function App() {
     setIsEditingTableName(false);
   };
 
+  // Handle PDF import
+  const handleImport = (importedTableName: string, importedColumns: ColumnDefinition[], importedData: DataRow[]) => {
+    setSelectedPreset(null); // Switch to custom mode
+    setTableName(importedTableName);
+    setColumns(importedColumns);
+    setData(importedData);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -277,6 +286,7 @@ function App() {
                   >
                     <PlusCircle size={16} className="mr-1" /> Add Row
                   </button>
+                  <ImportButton onImport={handleImport} />
                   <button
                     onClick={handleExport}
                     className="flex items-center px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
@@ -343,17 +353,20 @@ function App() {
               <p className="text-gray-500 mb-4">
                 Select a preset or create a custom table to get started
               </p>
-              <button
-                onClick={() => {
-                  setColumns([
-                    { id: 'column-1', title: 'Column 1', type: 'text' },
-                  ]);
-                  setData([{ id: `row-${Date.now()}`, 'column-1': '', color: '#ffffff' }]);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Create Custom Table
-              </button>
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={() => {
+                    setColumns([
+                      { id: 'column-1', title: 'Column 1', type: 'text' },
+                    ]);
+                    setData([{ id: `row-${Date.now()}`, 'column-1': '', color: '#ffffff' }]);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Create Custom Table
+                </button>
+                <ImportButton onImport={handleImport} />
+              </div>
             </div>
           )}
         </div>
