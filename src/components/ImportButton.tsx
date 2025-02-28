@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { FileUp } from 'lucide-react';
-import { importPDF } from '../utils/pdfImporter';
+import { importPDF } from '../utils/pdfImporter.ts';
 import toast from 'react-hot-toast';
 
 interface ImportButtonProps {
