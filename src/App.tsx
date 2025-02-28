@@ -93,6 +93,35 @@ function App() {
     setShowNewColumnInput(true);
   };
 
+  // Delete a column
+  const handleDeleteColumn = (columnId: string) => {
+    // Confirm deletion
+    if (!window.confirm(`Are you sure you want to delete the column "${columns.find(c => c.id === columnId)?.title}"? This will remove all data in this column.`)) {
+      return;
+    }
+    
+    // Remove the column from columns array
+    const updatedColumns = columns.filter(col => col.id !== columnId);
+    
+    // Remove the column data from all rows
+    const updatedData = data.map(row => {
+      const newRow = { ...row };
+      delete newRow[columnId];
+      return newRow;
+    });
+    
+    setColumns(updatedColumns);
+    setData(updatedData);
+    
+    // If we had a preset selected, we're now in a custom mode
+    if (selectedPreset) {
+      setSelectedPreset(null);
+      toast.success('Switched to custom layout');
+    }
+    
+    toast.success('Column deleted');
+  };
+
   // Confirm adding a new column
   const confirmAddColumn = () => {
     if (!newColumnTitle.trim()) {
@@ -341,6 +370,7 @@ function App() {
                 onCellChange={handleCellChange}
                 onAddColumn={handleAddColumn}
                 onRemoveRow={handleRemoveRow}
+                onDeleteColumn={handleDeleteColumn}
                 colorOptions={rowColorOptions}
                 onRowColorChange={handleRowColorChange}
               />

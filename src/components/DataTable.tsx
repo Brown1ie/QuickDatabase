@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, Trash2, Palette } from 'lucide-react';
+import { PlusCircle, Trash2, Palette, XCircle } from 'lucide-react';
 import { ColumnDefinition, DataRow } from '../App';
 
 interface DataTableProps {
@@ -8,6 +8,7 @@ interface DataTableProps {
   onCellChange: (rowId: string, columnId: string, value: any) => void;
   onAddColumn: (position: number) => void;
   onRemoveRow: (rowId: string) => void;
+  onDeleteColumn: (columnId: string) => void;
   colorOptions: string[];
   onRowColorChange: (rowId: string, color: string) => void;
 }
@@ -18,6 +19,7 @@ const DataTable: React.FC<DataTableProps> = ({
   onCellChange,
   onAddColumn,
   onRemoveRow,
+  onDeleteColumn,
   colorOptions,
   onRowColorChange,
 }) => {
@@ -71,7 +73,18 @@ const DataTable: React.FC<DataTableProps> = ({
                 )}
                 
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {column.title}
+                  <div className="flex items-center justify-between">
+                    <span>{column.title}</span>
+                    {columns.length > 1 && (
+                      <button
+                        onClick={() => onDeleteColumn(column.id)}
+                        className="ml-2 text-red-500 hover:text-red-700"
+                        title={`Delete ${column.title} column`}
+                      >
+                        <XCircle size={14} />
+                      </button>
+                    )}
+                  </div>
                 </th>
                 
                 <th className="w-10 px-2">

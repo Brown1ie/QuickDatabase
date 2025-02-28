@@ -47,7 +47,7 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
       const line = textItems[i].trim();
       if (line && line.includes(' ')) {
         // Potential header line with multiple columns
-        headers = line.split(/\s{2,}/).filter(h => h.trim());
+        headers = line.split(/\s{2,}/).filter((h: string) => h.trim());
         if (headers.length >= 2) {
           headerLine = i;
           break;
@@ -85,7 +85,6 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
     
     // Extract data rows
     const data: DataRow[] = [];
-    let currentRow: string[] = [];
     let rowIndex = 0;
     
     // Start from the line after headers
@@ -94,7 +93,7 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
       if (!line) continue;
       
       // Split the line into cells
-      const cells = line.split(/\s{2,}/).filter(c => c.trim());
+      const cells = line.split(/\s{2,}/).filter((c: string) => c.trim());
       
       // If we have enough cells, consider it a data row
       if (cells.length >= columns.length) {
