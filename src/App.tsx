@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { PlusCircle, Download, Trash2, Save, Database, Edit, FileUp } from 'lucide-react';
+import { PlusCircle, Download, Trash2, Save, Database, Edit, FileUp, FileDown } from 'lucide-react';
 import DataTable from './components/DataTable';
 import Header from './components/Header';
 import PresetSelector from './components/PresetSelector';
 import ImportButton from './components/ImportButton';
-import { generatePDF } from './utils/pdfGenerator';
+import { generatePDF, exportCSV } from './utils/pdfGenerator';
 import toast, { Toaster } from 'react-hot-toast';
 
 // Define preset types
@@ -222,6 +222,17 @@ function App() {
     generatePDF(columns, data, tableName);
     toast.success(`PDF exported as ${tableName}.pdf`);
   };
+  
+  // Export data as CSV
+  const handleExportCSV = () => {
+    if (columns.length === 0 || data.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+    
+    exportCSV(columns, data, tableName);
+    toast.success(`CSV exported as ${tableName}.csv`);
+  };
 
   // Reset the table
   const handleReset = () => {
@@ -250,7 +261,7 @@ function App() {
     setIsEditingTableName(false);
   };
 
-  // Handle PDF import
+  // Handle data import
   const handleImport = (importedTableName: string, importedColumns: ColumnDefinition[], importedData: DataRow[]) => {
     setSelectedPreset(null); // Switch to custom mode
     setTableName(importedTableName);
@@ -316,12 +327,20 @@ function App() {
                     <PlusCircle size={16} className="mr-1" /> Add Row
                   </button>
                   <ImportButton onImport={handleImport} />
-                  <button
-                    onClick={handleExport}
-                    className="flex items-center px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    <Download size={16} className="mr-1" /> Export PDF
-                  </button>
+                  <div className="relative group">
+                    <button
+                      onClick={handleExport}
+                      className="flex items-center px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      <Download size={16} className="mr-1" /> Export PDF
+                    </button>
+                    <button
+                      onClick={handleExportCSV}
+                      className="flex items-center px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 ml-2"
+                    >
+                      <FileDown size={16} className="mr-1" /> Export CSV
+                    </button>
+                  </div>
                   <button
                     onClick={handleReset}
                     className="flex items-center px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700"

@@ -21,25 +21,27 @@ const ImportButton: React.FC<ImportButtonProps> = ({ onImport }) => {
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    if (file.type !== 'application/pdf') {
-      toast.error('Please select a PDF file');
+    
+    // Now accepting CSV files instead of PDFs
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      toast.error('Please select a CSV file');
       return;
     }
 
-    toast.loading('Importing PDF...', { id: 'import-pdf' });
+    toast.loading('Importing data...', { id: 'import-data' });
     
     try {
       const result = await importPDF(file);
       
       if (result.success && result.columns.length > 0 && result.data.length > 0) {
         onImport(result.tableName, result.columns, result.data);
-        toast.success('PDF imported successfully', { id: 'import-pdf' });
+        toast.success('Data imported successfully', { id: 'import-data' });
       } else {
-        toast.error(result.error || 'Failed to extract data from PDF', { id: 'import-pdf' });
+        toast.error(result.error || 'Failed to extract data from file', { id: 'import-data' });
       }
     } catch (error) {
-      console.error('Error importing PDF:', error);
-      toast.error('Error importing PDF', { id: 'import-pdf' });
+      console.error('Error importing file:', error);
+      toast.error('Error importing file', { id: 'import-data' });
     }
     
     // Reset the file input
@@ -53,15 +55,15 @@ const ImportButton: React.FC<ImportButtonProps> = ({ onImport }) => {
       <button
         onClick={handleClick}
         className="flex items-center px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-        title="Import PDF"
+        title="Import CSV"
       >
-        <FileUp size={16} className="mr-1" /> Import PDF
+        <FileUp size={16} className="mr-1" /> Import CSV
       </button>
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="application/pdf"
+        accept=".csv,text/csv"
         className="hidden"
       />
     </>

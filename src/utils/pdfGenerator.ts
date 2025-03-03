@@ -129,3 +129,38 @@ export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableN
   const fileName = `${tableName.replace(/\s+/g, '-').toLowerCase()}.pdf`;
   doc.save(fileName);
 };
+
+// Export CSV function
+export const exportCSV = (columns: ColumnDefinition[], data: DataRow[], tableName: string = 'Data Export') => {
+  // Create CSV header row
+  const headerRow = columns.map(col => `"${col.title}"`).join(',');
+  
+  // Create CSV data rows
+  const dataRows = data.map(row => {
+    return columns.map(col => {
+      let value = row[col.id] || '';
+      
+      // Format currency values
+      if (col.type === 'currency' && value) {
+        value = `$${parseFloat(value).toFixed(2)}`;
+      }
+      
+      // Escape quotes and wrap in quotes
+      return `"${String(value).replace(/"/g, '""')}"`;
+    }).join(',');
+  });
+  
+  // Combine all rows
+  const csvContent = [headerRow, ...dataRows].join('\n');
+  
+  // Create a blob and download link
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${tableName.replace(/\s+/g, '-').toLowerCase()}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};

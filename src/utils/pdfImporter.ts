@@ -1,9 +1,4 @@
 import { ColumnDefinition, DataRow } from '../App';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Initialize PDF.js worker
-const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export interface ImportResult {
   tableName: string;
@@ -13,72 +8,89 @@ export interface ImportResult {
   error?: string;
 }
 
-export const importPDF = async (file: File): Promise<ImportResult> => {
-  try {
-    // Read the file as ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
+// Simple CSV parser function
+const parseCSV = (csvText: string): string[][] => {
+  const lines = csvText.split('\n');
+  return lines.map(line => {
+    // Handle quoted values with commas inside them
+    const result = [];
+    let inQuote = false;
+    let currentValue = '';
     
-    // Load the PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdf = await loadingTask.promise;
-    
-    // Get the first page
-    const page = await pdf.getPage(1);
-    const textContent = await page.getTextContent();
-    
-    // Extract text items
-    const textItems = textContent.items.map((item: any) => item.str);
-    
-    // Try to extract table name (usually at the top of the document)
-    let tableName = 'Imported Table';
-    if (textItems.length > 0) {
-      tableName = textItems[0].trim();
-    }
-    
-    // Try to extract column headers and data
-    // This is a simplified approach - PDF parsing is complex and may need refinement
-    // for different PDF structures
-    
-    // Find potential column headers (usually in the first few lines)
-    let headerLine = -1;
-    let headers: string[] = [];
-    
-    // Look for a line that might contain headers
-    for (let i = 1; i < Math.min(10, textItems.length); i++) {
-      const line = textItems[i].trim();
-      if (line && line.includes(' ')) {
-        // Potential header line with multiple columns
-        headers = line.split(/\s{2,}/).filter((h: string) => h.trim());
-        if (headers.length >= 2) {
-          headerLine = i;
-          break;
-        }
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuote = !inQuote;
+      } else if (char === ',' && !inQuote) {
+        result.push(currentValue);
+        currentValue = '';
+      } else {
+        currentValue += char;
       }
     }
     
-    if (headerLine === -1 || headers.length === 0) {
+    // Add the last value
+    result.push(currentValue);
+    return result;
+  }).filter(row => row.length > 0 && row.some(cell => cell.trim() !== ''));
+};
+
+export const importPDF = async (file: File): Promise<ImportResult> => {
+  try {
+    // Since PDF.js is causing issues, we'll use a simpler approach
+    // We'll ask users to upload CSV files instead of PDFs
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
       return {
-        tableName,
+        tableName: 'Import Failed',
         columns: [],
         data: [],
         success: false,
-        error: 'Could not detect table headers in the PDF'
+        error: 'Please upload a CSV file instead of a PDF. Due to browser limitations, we now support CSV imports.'
       };
+    }
+    
+    // Read the file as text
+    const text = await file.text();
+    const parsedData = parseCSV(text);
+    
+    if (parsedData.length < 2) {
+      return {
+        tableName: 'Import Failed',
+        columns: [],
+        data: [],
+        success: false,
+        error: 'CSV file must contain at least a header row and one data row'
+      };
+    }
+    
+    // First row is headers
+    const headers = parsedData[0];
+    
+    // Extract table name from file name
+    let tableName = file.name.replace(/\.csv$/i, '').replace(/_/g, ' ');
+    if (!tableName) {
+      tableName = 'Imported Table';
     }
     
     // Create column definitions
     const columns: ColumnDefinition[] = headers.map((header, index) => {
-      const id = header.toLowerCase().replace(/\s+/g, '-');
+      const id = header.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       // Try to detect column type
       let type: 'text' | 'number' | 'currency' = 'text';
-      if (header.toLowerCase().includes('price') || header.toLowerCase().includes('cost')) {
+      
+      if (header.toLowerCase().includes('price') || 
+          header.toLowerCase().includes('cost') || 
+          header.toLowerCase().includes('$')) {
         type = 'currency';
-      } else if (header.toLowerCase().includes('rating') || header.toLowerCase().includes('count')) {
+      } else if (header.toLowerCase().includes('rating') || 
+                header.toLowerCase().includes('count') || 
+                header.toLowerCase().includes('number')) {
         type = 'number';
       }
       
       return {
-        id,
+        id: id || `column-${index}`,
         title: header,
         type
       };
@@ -86,47 +98,37 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
     
     // Extract data rows
     const data: DataRow[] = [];
-    let rowIndex = 0;
     
-    // Start from the line after headers
-    for (let i = headerLine + 1; i < textItems.length; i++) {
-      const line = textItems[i].trim();
-      if (!line) continue;
+    // Start from the second row (index 1)
+    for (let i = 1; i < parsedData.length; i++) {
+      const rowData: DataRow = {
+        id: `row-${i-1}`,
+        color: '#ffffff' // default color
+      };
       
-      // Split the line into cells
-      const cells = line.split(/\s{2,}/).filter((c: string) => c.trim());
-      
-      // If we have enough cells, consider it a data row
-      if (cells.length >= columns.length) {
-        const rowData: DataRow = {
-          id: `row-${rowIndex++}`,
-          color: '#ffffff'
-        };
-        
-        // Map cells to columns
-        columns.forEach((col, colIndex) => {
-          if (colIndex < cells.length) {
-            let value = cells[colIndex];
-            
-            // Try to convert to appropriate type
-            if (col.type === 'number') {
-              const num = parseFloat(value.replace(/[^0-9.-]/g, ''));
-              if (!isNaN(num)) {
-                value = num.toString();
-              }
-            } else if (col.type === 'currency') {
-              const num = parseFloat(value.replace(/[^0-9.-]/g, ''));
-              if (!isNaN(num)) {
-                value = num.toString();
-              }
+      // Map cells to columns
+      columns.forEach((col, colIndex) => {
+        if (colIndex < parsedData[i].length) {
+          let value = parsedData[i][colIndex];
+          
+          // Try to convert to appropriate type
+          if (col.type === 'number') {
+            const num = parseFloat(value.replace(/[^0-9.-]/g, ''));
+            if (!isNaN(num)) {
+              value = num.toString();
             }
-            
-            rowData[col.id] = value;
+          } else if (col.type === 'currency') {
+            const num = parseFloat(value.replace(/[^0-9.-]/g, ''));
+            if (!isNaN(num)) {
+              value = num.toString();
+            }
           }
-        });
-        
-        data.push(rowData);
-      }
+          
+          rowData[col.id] = value;
+        }
+      });
+      
+      data.push(rowData);
     }
     
     return {
@@ -136,13 +138,13 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
       success: true
     };
   } catch (error) {
-    console.error('Error importing PDF:', error);
+    console.error('Error importing file:', error);
     return {
       tableName: 'Import Failed',
       columns: [],
       data: [],
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error importing PDF'
+      error: error instanceof Error ? error.message : 'Unknown error importing file'
     };
   }
 };
