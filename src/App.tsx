@@ -4,14 +4,17 @@ import DataTable from './components/DataTable';
 import Header from './components/Header';
 import PresetSelector from './components/PresetSelector';
 import ImportButton from './components/ImportButton';
+import ThemeSwitcher from './components/ThemeSwitcher';
 import { generatePDF, exportCSV } from './utils/pdfGenerator';
 import toast, { Toaster } from 'react-hot-toast';
+import { useTheme } from './context/ThemeContext';
 
 // Define preset types
 export type ColumnDefinition = {
   id: string;
   title: string;
   type: 'text' | 'number' | 'currency';
+  locked?: boolean;
 };
 
 export type Preset = {
@@ -23,10 +26,13 @@ export type Preset = {
 export type DataRow = {
   id: string;
   color?: string;
+  locked?: boolean;
   [key: string]: any;
 };
 
 function App() {
+  const { currentTheme } = useTheme();
+  
   // Predefined presets
   const presets: Preset[] = [
     {
@@ -58,14 +64,8 @@ function App() {
   const [newColumnPosition, setNewColumnPosition] = useState<number | null>(null);
   const [tableName, setTableName] = useState('My Table');
   const [isEditingTableName, setIsEditingTableName] = useState(false);
-  const [rowColorOptions] = useState<string[]>([
-    '#ffffff', // white (default)
-    '#f0f9ff', // light blue
-    '#f0fdf4', // light green
-    '#fef2f2', // light red
-    '#fffbeb', // light yellow
-    '#f5f3ff', // light purple
-  ]);
+  const [rowColorOptions] = useState<string[]>(currentTheme.rowColorOptions);
+  const [indexColumnLocked, setIndexColumnLocked] = useState(false);
 
   // Handle preset selection
   const handlePresetSelect = (presetId: string) => {
@@ -78,12 +78,13 @@ function App() {
       // Initialize with one empty row
       const emptyRow: DataRow = {
         id: `row-${Date.now()}`,
-        color: '#ffffff', // default color
+        color: currentTheme.rowColorOptions[0], // default color
       };
       preset.columns.forEach((col) => {
         emptyRow[col.id] = '';
       });
       setData([emptyRow]);
+      setIndexColumnLocked(false);
     }
   };
 
@@ -95,6 +96,13 @@ function App() {
 
   // Delete a column
   const handleDeleteColumn = (columnId: string) => {
+    // Check if column is locked
+    const column = columns.find(col => col.id === columnId);
+    if (column?.locked) {
+      toast.error('Cannot delete a locked column. Unlock it first.');
+      return;
+    }
+    
     // Confirm deletion
     if (!window.confirm(`Are you sure you want to delete the column "${columns.find(c => c.id === columnId)?.title}"? This will remove all data in this column.`)) {
       return;
@@ -122,6 +130,38 @@ function App() {
     toast.success('Column deleted');
   };
 
+  // Toggle column lock
+  const handleToggleColumnLock = (columnId: string) => {
+    const updatedColumns = columns.map(col => {
+      if (col.id === columnId) {
+        return { ...col, locked: !col.locked };
+      }
+      return col;
+    });
+    
+    setColumns(updatedColumns);
+    toast.success(`Column ${updatedColumns.find(c => c.id === columnId)?.locked ? 'locked' : 'unlocked'}`);
+  };
+  
+  // Toggle index column lock
+  const handleToggleIndexColumnLock = () => {
+    setIndexColumnLocked(!indexColumnLocked);
+    toast.success(`Index column ${!indexColumnLocked ? 'locked' : 'unlocked'}`);
+  };
+
+  // Toggle row lock
+  const handleToggleRowLock = (rowId: string) => {
+    const updatedData = data.map(row => {
+      if (row.id === rowId) {
+        return { ...row, locked: !row.locked };
+      }
+      return row;
+    });
+    
+    setData(updatedData);
+    toast.success(`Row ${updatedData.find(r => r.id === rowId)?.locked ? 'locked' : 'unlocked'}`);
+  };
+
   // Confirm adding a new column
   const confirmAddColumn = () => {
     if (!newColumnTitle.trim()) {
@@ -135,6 +175,7 @@ function App() {
       id: newColumnId,
       title: newColumnTitle,
       type: 'text',
+      locked: false,
     };
 
     const position = newColumnPosition !== null ? newColumnPosition : columns.length;
@@ -167,7 +208,8 @@ function App() {
   const handleAddRow = () => {
     const newRow: DataRow = {
       id: `row-${Date.now()}`,
-      color: '#ffffff', // default color
+      color: currentTheme.rowColorOptions[0], // default color
+      locked: false,
     };
     
     columns.forEach((col) => {
@@ -179,11 +221,32 @@ function App() {
 
   // Remove a row
   const handleRemoveRow = (rowId: string) => {
+    // Check if row is locked
+    const row = data.find(r => r.id === rowId);
+    if (row?.locked) {
+      toast.error('Cannot delete a locked row. Unlock it first.');
+      return;
+    }
+    
     setData(data.filter((row) => row.id !== rowId));
   };
 
   // Update cell data
   const handleCellChange = (rowId: string, columnId: string, value: any) => {
+    // Check if row or column is locked
+    const row = data.find(r => r.id === rowId);
+    const column = columns.find(c => c.id === columnId);
+    
+    if (row?.locked) {
+      toast.error('Cannot edit a locked row');
+      return;
+    }
+    
+    if (column?.locked) {
+      toast.error('Cannot edit a locked column');
+      return;
+    }
+    
     const updatedData = data.map((row) => {
       if (row.id === rowId) {
         return {
@@ -199,6 +262,13 @@ function App() {
 
   // Update row color
   const handleRowColorChange = (rowId: string, color: string) => {
+    // Check if row is locked
+    const row = data.find(r => r.id === rowId);
+    if (row?.locked) {
+      toast.error('Cannot change color of a locked row');
+      return;
+    }
+    
     const updatedData = data.map((row) => {
       if (row.id === rowId) {
         return {
@@ -240,6 +310,7 @@ function App() {
     setColumns([]);
     setData([]);
     setTableName('My Table');
+    setIndexColumnLocked(false);
     toast.success('Table reset');
   };
 
@@ -267,15 +338,27 @@ function App() {
     setTableName(importedTableName);
     setColumns(importedColumns);
     setData(importedData);
+    setIndexColumnLocked(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div 
+      className="min-h-screen"
+      style={{ backgroundColor: currentTheme.backgroundColor }}
+    >
       <Header />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Select a Preset or Create Custom Table</h2>
+        <div 
+          className="rounded-lg shadow-md p-6 mb-8"
+          style={{ backgroundColor: '#ffffff' }}
+        >
+          <h2 
+            className="text-xl font-semibold mb-4"
+            style={{ color: currentTheme.textColor }}
+          >
+            Select a Preset or Create Custom Table
+          </h2>
           <PresetSelector 
             presets={presets} 
             onSelect={handlePresetSelect} 
@@ -296,17 +379,22 @@ function App() {
                         autoFocus
                         onBlur={saveTableName}
                         onKeyDown={(e) => e.key === 'Enter' && saveTableName()}
+                        style={{ color: currentTheme.textColor }}
                       />
                       <button
                         onClick={saveTableName}
-                        className="text-blue-600 hover:text-blue-800"
+                        style={{ color: currentTheme.primaryButtonBg }}
+                        className="hover:opacity-80"
                       >
                         <Save size={16} />
                       </button>
                     </div>
                   ) : (
                     <div className="flex items-center">
-                      <h2 className="text-xl font-semibold mr-2">
+                      <h2 
+                        className="text-xl font-semibold mr-2"
+                        style={{ color: currentTheme.textColor }}
+                      >
                         {tableName}
                       </h2>
                       <button
@@ -322,7 +410,11 @@ function App() {
                 <div className="flex space-x-2">
                   <button
                     onClick={handleAddRow}
-                    className="flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
+                    style={{ 
+                      backgroundColor: currentTheme.primaryButtonBg,
+                      color: '#ffffff'
+                    }}
                   >
                     <PlusCircle size={16} className="mr-1" /> Add Row
                   </button>
@@ -330,20 +422,32 @@ function App() {
                   <div className="relative group">
                     <button
                       onClick={handleExport}
-                      className="flex items-center px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
+                      style={{ 
+                        backgroundColor: currentTheme.secondaryButtonBg,
+                        color: '#ffffff'
+                      }}
                     >
                       <Download size={16} className="mr-1" /> Export PDF
                     </button>
                     <button
                       onClick={handleExportCSV}
-                      className="flex items-center px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 ml-2"
+                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity ml-2"
+                      style={{ 
+                        backgroundColor: currentTheme.secondaryButtonBg,
+                        color: '#ffffff'
+                      }}
                     >
                       <FileDown size={16} className="mr-1" /> Export CSV
                     </button>
                   </div>
                   <button
                     onClick={handleReset}
-                    className="flex items-center px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
+                    style={{ 
+                      backgroundColor: currentTheme.dangerButtonBg,
+                      color: '#ffffff'
+                    }}
                   >
                     <Trash2 size={16} className="mr-1" /> Reset
                   </button>
@@ -352,8 +456,16 @@ function App() {
               
               {showNewColumnInput && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-                    <h3 className="text-lg font-semibold mb-4">Add New Column</h3>
+                  <div 
+                    className="p-6 rounded-lg shadow-lg w-96"
+                    style={{ backgroundColor: '#ffffff' }}
+                  >
+                    <h3 
+                      className="text-lg font-semibold mb-4"
+                      style={{ color: currentTheme.textColor }}
+                    >
+                      Add New Column
+                    </h3>
                     <input
                       type="text"
                       value={newColumnTitle}
@@ -374,7 +486,8 @@ function App() {
                       </button>
                       <button
                         onClick={confirmAddColumn}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        className="px-4 py-2 text-white rounded hover:opacity-90 transition-opacity"
+                        style={{ backgroundColor: currentTheme.primaryButtonBg }}
                       >
                         Add
                       </button>
@@ -390,27 +503,45 @@ function App() {
                 onAddColumn={handleAddColumn}
                 onRemoveRow={handleRemoveRow}
                 onDeleteColumn={handleDeleteColumn}
-                colorOptions={rowColorOptions}
+                colorOptions={currentTheme.rowColorOptions}
                 onRowColorChange={handleRowColorChange}
+                onToggleColumnLock={handleToggleColumnLock}
+                onToggleRowLock={handleToggleRowLock}
+                indexColumnLocked={indexColumnLocked}
+                onToggleIndexColumnLock={handleToggleIndexColumnLock}
+                theme={currentTheme}
               />
             </div>
           )}
           
           {columns.length === 0 && (
             <div className="mt-8 text-center p-12 border-2 border-dashed border-gray-300 rounded-lg">
-              <Database size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 mb-4">
+              <Database 
+                size={48} 
+                className="mx-auto mb-4" 
+                style={{ color: '#9ca3af' }}
+              />
+              <p 
+                className="mb-4"
+                style={{ color: currentTheme.textColor }}
+              >
                 Select a preset or create a custom table to get started
               </p>
               <div className="flex justify-center space-x-4">
                 <button
                   onClick={() => {
                     setColumns([
-                      { id: 'column-1', title: 'Column 1', type: 'text' },
+                      { id: 'column-1', title: 'Column 1', type: 'text', locked: false },
                     ]);
-                    setData([{ id: `row-${Date.now()}`, 'column-1': '', color: '#ffffff' }]);
+                    setData([{ 
+                      id: `row-${Date.now()}`, 
+                      'column-1': '', 
+                      color: currentTheme.rowColorOptions[0],
+                      locked: false
+                    }]);
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 text-white rounded hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: currentTheme.primaryButtonBg }}
                 >
                   Create Custom Table
                 </button>
@@ -421,6 +552,7 @@ function App() {
         </div>
       </main>
       
+      <ThemeSwitcher />
       <Toaster position="bottom-right" />
     </div>
   );

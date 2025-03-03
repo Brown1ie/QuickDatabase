@@ -1,5 +1,6 @@
 import React from 'react';
 import { Preset } from '../App';
+import { useTheme } from '../context/ThemeContext';
 
 interface PresetSelectorProps {
   presets: Preset[];
@@ -12,6 +13,8 @@ const PresetSelector: React.FC<PresetSelectorProps> = ({
   onSelect, 
   selectedPresetId 
 }) => {
+  const { currentTheme } = useTheme();
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {presets.map((preset) => (
@@ -23,8 +26,17 @@ const PresetSelector: React.FC<PresetSelectorProps> = ({
               : 'border-gray-200 hover:border-blue-300'
           }`}
           onClick={() => onSelect(preset.id)}
+          style={{ 
+            borderColor: selectedPresetId === preset.id ? currentTheme.primaryButtonBg : undefined,
+            backgroundColor: selectedPresetId === preset.id ? `${currentTheme.primaryButtonBg}10` : undefined
+          }}
         >
-          <h3 className="font-semibold text-lg mb-2">{preset.name}</h3>
+          <h3 
+            className="font-semibold text-lg mb-2"
+            style={{ color: currentTheme.textColor }}
+          >
+            {preset.name}
+          </h3>
           <div className="text-sm text-gray-600">
             <p>{preset.columns.length} columns</p>
             <p className="mt-1">

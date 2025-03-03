@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { PlusCircle, Trash2, Palette, XCircle } from 'lucide-react';
+import { PlusCircle, Trash2, Palette, XCircle, Lock, Unlock } from 'lucide-react';
 import { ColumnDefinition, DataRow } from '../App';
+import { Theme } from '../types/theme';
 
 interface DataTableProps {
   columns: ColumnDefinition[];
@@ -11,6 +12,11 @@ interface DataTableProps {
   onDeleteColumn: (columnId: string) => void;
   colorOptions: string[];
   onRowColorChange: (rowId: string, color: string) => void;
+  onToggleColumnLock: (columnId: string) => void;
+  onToggleRowLock: (rowId: string) => void;
+  indexColumnLocked: boolean;
+  onToggleIndexColumnLock: () => void;
+  theme: Theme;
 }
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -22,6 +28,11 @@ const DataTable: React.FC<DataTableProps> = ({
   onDeleteColumn,
   colorOptions,
   onRowColorChange,
+  onToggleColumnLock,
+  onToggleRowLock,
+  indexColumnLocked,
+  onToggleIndexColumnLock,
+  theme
 }) => {
   // Format value based on column type
   const formatValue = (value: any, type: string): string => {
@@ -55,7 +66,16 @@ const DataTable: React.FC<DataTableProps> = ({
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              #
+              <div className="flex items-center justify-between">
+                <span>#</span>
+                <button
+                  onClick={onToggleIndexColumnLock}
+                  className={`ml-2 ${indexColumnLocked ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-800`}
+                  title={indexColumnLocked ? "Unlock index column" : "Lock index column"}
+                >
+                  {indexColumnLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                </button>
+              </div>
             </th>
             
             {columns.map((column, index) => (
@@ -64,7 +84,8 @@ const DataTable: React.FC<DataTableProps> = ({
                   <th className="w-10 px-2">
                     <button
                       onClick={() => onAddColumn(0)}
-                      className="p-1 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-100"
+                      className="p-1 rounded-full hover:bg-blue-100"
+                      style={{ color: theme.primaryButtonBg }}
                       title="Add column before"
                     >
                       <PlusCircle size={16} />
@@ -75,22 +96,33 @@ const DataTable: React.FC<DataTableProps> = ({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <div className="flex items-center justify-between">
                     <span>{column.title}</span>
-                    {columns.length > 1 && (
+                    <div className="flex items-center">
                       <button
-                        onClick={() => onDeleteColumn(column.id)}
-                        className="ml-2 text-red-500 hover:text-red-700"
-                        title={`Delete ${column.title} column`}
+                        onClick={() => onToggleColumnLock(column.id)}
+                        className={`mr-2 ${column.locked ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-800`}
+                        title={column.locked ? "Unlock column" : "Lock column"}
                       >
-                        <XCircle size={14} />
+                        {column.locked ? <Lock size={14} /> : <Unlock size={14} />}
                       </button>
-                    )}
+                      {columns.length > 1 && (
+                        <button
+                          onClick={() => onDeleteColumn(column.id)}
+                          className="text-red-500 hover:text-red-700"
+                          title={`Delete ${column.title} column`}
+                          disabled={column.locked}
+                        >
+                          <XCircle size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </th>
                 
                 <th className="w-10 px-2">
                   <button
                     onClick={() => onAddColumn(index + 1)}
-                    className="p-1 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-100"
+                    className="p-1 rounded-full hover:bg-blue-100"
+                    style={{ color: theme.primaryButtonBg }}
                     title="Add column after"
                   >
                     <PlusCircle size={16} />
@@ -108,15 +140,18 @@ const DataTable: React.FC<DataTableProps> = ({
         <tbody className="bg-white divide-y divide-gray-200">
           {data.map((row, rowIndex) => (
             <tr key={row.id} style={{ backgroundColor: row.color || '#ffffff' }}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {rowIndex + 1}
+              <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${indexColumnLocked || row.locked ? 'bg-gray-100' : ''}`}>
+                <div className="flex items-center">
+                  <span className="mr-2">{rowIndex + 1}</span>
+                  {row.locked && <Lock size={14} className="text-blue-600" />}
+                </div>
               </td>
               
               {columns.map((column, colIndex) => (
                 <React.Fragment key={`${row.id}-${column.id}`}>
                   {colIndex === 0 && <td className="w-10"></td>}
                   
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className={`px-6 py-4 whitespace-nowrap ${column.locked || row.locked ? 'bg-gray-100' : ''}`}>
                     <input
                       type={column.type === 'number' || column.type === 'currency' ? 'number' : 'text'}
                       value={row[column.id] || ''}
@@ -126,9 +161,15 @@ const DataTable: React.FC<DataTableProps> = ({
                           : e.target.value;
                         onCellChange(row.id, column.id, value);
                       }}
-                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:border-transparent ${
+                        column.locked || row.locked 
+                          ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed' 
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                       placeholder={`Enter ${column.title.toLowerCase()}`}
                       step={column.type === 'currency' ? '0.01' : '1'}
+                      disabled={column.locked || row.locked}
+                      readOnly={column.locked || row.locked}
                     />
                   </td>
                   
@@ -138,16 +179,25 @@ const DataTable: React.FC<DataTableProps> = ({
               
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => onToggleRowLock(row.id)}
+                    className={`${row.locked ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-800`}
+                    title={row.locked ? "Unlock row" : "Lock row"}
+                  >
+                    {row.locked ? <Lock size={16} /> : <Unlock size={16} />}
+                  </button>
+                  
                   <div className="relative">
                     <button
                       onClick={() => toggleColorPicker(row.id)}
                       className="text-gray-600 hover:text-gray-800 mr-2"
                       title="Change row color"
+                      disabled={row.locked}
                     >
-                      <Palette size={16} />
+                      <Palette size={16} className={row.locked ? 'opacity-50' : ''} />
                     </button>
                     
-                    {activeColorPicker === row.id && (
+                    {activeColorPicker === row.id && !row.locked && (
                       <div className="absolute right-0 mt-2 p-2 bg-white border rounded-md shadow-lg z-10 flex flex-wrap gap-1 w-32">
                         {colorOptions.map((color) => (
                           <button
@@ -158,7 +208,7 @@ const DataTable: React.FC<DataTableProps> = ({
                             }}
                             className="w-6 h-6 rounded-full border border-gray-300"
                             style={{ backgroundColor: color }}
-                            title={color === '#ffffff' ? 'Default' : color}
+                            title={color === colorOptions[0] ? 'Default' : color}
                           />
                         ))}
                       </div>
@@ -167,8 +217,9 @@ const DataTable: React.FC<DataTableProps> = ({
                   
                   <button
                     onClick={() => onRemoveRow(row.id)}
-                    className="text-red-600 hover:text-red-800"
+                    className={`text-red-600 hover:text-red-800 ${row.locked ? 'opacity-50' : ''}`}
                     title="Remove row"
+                    disabled={row.locked}
                   >
                     <Trash2 size={16} />
                   </button>

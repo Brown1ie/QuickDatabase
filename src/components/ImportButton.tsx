@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { FileUp } from 'lucide-react';
 import { importPDF } from '../utils/pdfImporter';
 import toast from 'react-hot-toast';
+import { useTheme } from '../context/ThemeContext';
 
 interface ImportButtonProps {
   onImport: (tableName: string, columns: any[], data: any[]) => void;
@@ -9,6 +10,7 @@ interface ImportButtonProps {
 
 const ImportButton: React.FC<ImportButtonProps> = ({ onImport }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { currentTheme } = useTheme();
 
   const handleClick = () => {
     if (fileInputRef.current) {
@@ -34,7 +36,18 @@ const ImportButton: React.FC<ImportButtonProps> = ({ onImport }) => {
       const result = await importPDF(file);
       
       if (result.success && result.columns.length > 0 && result.data.length > 0) {
-        onImport(result.tableName, result.columns, result.data);
+        // Add locked property to imported data
+        const columnsWithLock = result.columns.map(col => ({
+          ...col,
+          locked: false
+        }));
+        
+        const dataWithLock = result.data.map(row => ({
+          ...row,
+          locked: false
+        }));
+        
+        onImport(result.tableName, columnsWithLock, dataWithLock);
         toast.success('Data imported successfully', { id: 'import-data' });
       } else {
         toast.error(result.error || 'Failed to extract data from file', { id: 'import-data' });
@@ -54,7 +67,8 @@ const ImportButton: React.FC<ImportButtonProps> = ({ onImport }) => {
     <>
       <button
         onClick={handleClick}
-        className="flex items-center px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+        className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
+        style={{ backgroundColor: currentTheme.primaryButtonBg }}
         title="Import CSV"
       >
         <FileUp size={16} className="mr-1" /> Import CSV
