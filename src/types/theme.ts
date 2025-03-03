@@ -53,7 +53,7 @@ export interface Theme {
     headerGradientFrom: '#1e3a8a', // blue-900
     headerGradientTo: '#312e81', // indigo-900
     headerTextColor: '#f3f4f6', // gray-100
-    textColor: '#e5e7eb', // gray-200
+    textColor: '#1f2937', // gray-800
     primaryButtonBg: '#3b82f6', // blue-500
     primaryButtonHoverBg: '#2563eb', // blue-600
     secondaryButtonBg: '#10b981', // green-500
