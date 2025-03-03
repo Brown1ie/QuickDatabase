@@ -1,8 +1,9 @@
-import * as pdfjsLib from 'pdfjs-dist';
 import { ColumnDefinition, DataRow } from '../App';
+import * as pdfjsLib from 'pdfjs-dist';
 
 // Initialize PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export interface ImportResult {
   tableName: string;

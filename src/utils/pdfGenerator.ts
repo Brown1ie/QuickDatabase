@@ -9,6 +9,31 @@ declare module 'jspdf' {
   }
 }
 
+// Helper function to convert hex color to RGB
+const hexToRgb = (hex: string): [number, number, number] => {
+  // Default to white if no color is provided
+  if (!hex || hex === '#ffffff') return [255, 255, 255];
+  
+  // Remove the # if present
+  hex = hex.replace('#', '');
+  
+  // Parse the hex values
+  const r = parseInt(hex.substring(0, 2), 16) || 255;
+  const g = parseInt(hex.substring(2, 4), 16) || 255;
+  const b = parseInt(hex.substring(4, 6), 16) || 255;
+  
+  return [r, g, b];
+};
+
+// Helper function to lighten a color for PDF
+const lightenColor = (rgb: [number, number, number], factor: number = 0.9): [number, number, number] => {
+  return [
+    Math.min(255, rgb[0] + (255 - rgb[0]) * factor),
+    Math.min(255, rgb[1] + (255 - rgb[1]) * factor),
+    Math.min(255, rgb[2] + (255 - rgb[2]) * factor)
+  ];
+};
+
 export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableName: string = 'Data Export') => {
   // Create a new PDF document
   const doc = new jsPDF();
@@ -49,11 +74,11 @@ export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableN
     return rowData;
   });
   
-  // Generate the table
+  // Generate the table with row colors
   doc.autoTable({
     startY: 40,
     head: [tableColumns.map((col) => col.header)],
-    body: tableData.map((row) => 
+    body: tableData.map((row, index) => 
       tableColumns.map((col) => row[col.dataKey])
     ),
     theme: 'grid',
@@ -61,6 +86,38 @@ export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableN
       fillColor: [66, 133, 244],
       textColor: 255,
       fontStyle: 'bold',
+    },
+    // Use row colors from data
+    didParseCell: function(data) {
+      const rowIndex = data.row.index;
+      if (rowIndex >= 0 && rowIndex < data.table.body.length) {
+        const rowColor = data.row.raw?.color || data[rowIndex]?.color || '#ffffff';
+        if (data.section === 'body') {
+          // Convert hex color to RGB and lighten it for better readability
+          const rgb = lightenColor(hexToRgb(rowColor));
+          data.cell.styles.fillColor = rgb;
+        }
+      }
+    },
+    // Add row colors
+    willDrawCell: function(data) {
+      if (data.section === 'body') {
+        const rowIndex = data.row.index;
+        const originalRow = data.row.index < data.length ? data[rowIndex] : null;
+        if (originalRow && originalRow.color && originalRow.color !== '#ffffff') {
+          const rgb = lightenColor(hexToRgb(originalRow.color));
+          data.cell.styles.fillColor = rgb;
+        }
+      }
+    },
+    // Map row data to include color information
+    rowStyles: function(row, rowIndex) {
+      const originalRow = data[rowIndex];
+      if (originalRow && originalRow.color && originalRow.color !== '#ffffff') {
+        const rgb = lightenColor(hexToRgb(originalRow.color));
+        return { fillColor: rgb };
+      }
+      return {};
     },
     alternateRowStyles: {
       fillColor: [240, 240, 240],
