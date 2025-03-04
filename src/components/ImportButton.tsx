@@ -67,7 +67,7 @@ const ImportButton: React.FC<ImportButtonProps> = ({ onImport }) => {
     <>
       <button
         onClick={handleClick}
-        className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
+        className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity w-32"
         style={{ backgroundColor: currentTheme.primaryButtonBg }}
         title="Import CSV"
       >

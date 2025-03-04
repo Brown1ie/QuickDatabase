@@ -430,34 +430,36 @@ function App() {
                     </div>
                   )}
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleAddRow}
-                    className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
-                    style={{ 
-                      backgroundColor: currentTheme.primaryButtonBg,
-                      color: '#ffffff'
-                    }}
-                  >
-                    <PlusCircle size={16} className="mr-1" /> Add Row
-                  </button>
-                  <button
-                    onClick={handleToggleIndexColumn}
-                    className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
-                    style={{ 
-                      backgroundColor: currentTheme.secondaryButtonBg,
-                      color: '#ffffff'
-                    }}
-                    title={showIndexColumn ? "Hide index column" : "Show index column"}
-                  >
-                    {showIndexColumn ? <EyeOff size={16} className="mr-1" /> : <Eye size={16} className="mr-1" />}
-                    {showIndexColumn ? "Hide #" : "Show #"}
-                  </button>
-                  <ImportButton onImport={handleImport} />
-                  <div className="relative group">
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleAddRow}
+                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity w-32"
+                      style={{ 
+                        backgroundColor: currentTheme.primaryButtonBg,
+                        color: '#ffffff'
+                      }}
+                    >
+                      <PlusCircle size={16} className="mr-1" /> Add Row
+                    </button>
+                    <button
+                      onClick={handleToggleIndexColumn}
+                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity w-32"
+                      style={{ 
+                        backgroundColor: currentTheme.secondaryButtonBg,
+                        color: '#ffffff'
+                      }}
+                      title={showIndexColumn ? "Hide index column" : "Show index column"}
+                    >
+                      {showIndexColumn ? <EyeOff size={16} className="mr-1" /> : <Eye size={16} className="mr-1" />}
+                      {showIndexColumn ? "Hide #" : "Show #"}
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <ImportButton onImport={handleImport} />
                     <button
                       onClick={handleExport}
-                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
+                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity w-32"
                       style={{ 
                         backgroundColor: currentTheme.secondaryButtonBg,
                         color: '#ffffff'
@@ -465,9 +467,11 @@ function App() {
                     >
                       <Download size={16} className="mr-1" /> Export PDF
                     </button>
+                  </div>
+                  <div className="flex gap-2">
                     <button
                       onClick={handleExportCSV}
-                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity ml-2"
+                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity w-32"
                       style={{ 
                         backgroundColor: currentTheme.secondaryButtonBg,
                         color: '#ffffff'
@@ -475,17 +479,17 @@ function App() {
                     >
                       <FileDown size={16} className="mr-1" /> Export CSV
                     </button>
+                    <button
+                      onClick={handleReset}
+                      className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity w-32"
+                      style={{ 
+                        backgroundColor: currentTheme.dangerButtonBg,
+                        color: '#ffffff'
+                      }}
+                    >
+                      <Trash2 size={16} className="mr-1" /> Reset
+                    </button>
                   </div>
-                  <button
-                    onClick={handleReset}
-                    className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
-                    style={{ 
-                      backgroundColor: currentTheme.dangerButtonBg,
-                      color: '#ffffff'
-                    }}
-                  >
-                    <Trash2 size={16} className="mr-1" /> Reset
-                  </button>
                 </div>
               </div>
               

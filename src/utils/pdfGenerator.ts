@@ -25,15 +25,6 @@ const hexToRgb = (hex: string): [number, number, number] => {
   return [r, g, b];
 };
 
-// Helper function to lighten a color for PDF
-const lightenColor = (rgb: [number, number, number], factor: number = 0.9): [number, number, number] => {
-  return [
-    Math.min(255, rgb[0] + (255 - rgb[0]) * factor),
-    Math.min(255, rgb[1] + (255 - rgb[1]) * factor),
-    Math.min(255, rgb[2] + (255 - rgb[2]) * factor)
-  ];
-};
-
 export const generatePDF = (
   columns: ColumnDefinition[], 
   data: DataRow[], 
@@ -116,8 +107,8 @@ export const generatePDF = (
       if (rowIndex >= 0 && rowIndex < tableData.length) {
         const rowColor = tableData[rowIndex].color || '#ffffff';
         if (data.section === 'body') {
-          // Convert hex color to RGB and lighten it for better readability
-          const rgb = lightenColor(hexToRgb(rowColor));
+          // Use exact colors without lightening
+          const rgb = hexToRgb(rowColor);
           data.cell.styles.fillColor = rgb;
         }
       }
