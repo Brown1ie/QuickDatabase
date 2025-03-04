@@ -73,8 +73,12 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
       tableName = 'Imported Table';
     }
     
+    // Check if the first column is an index column
+    const hasIndexColumn = headers[0] === '#';
+    const startColumnIndex = hasIndexColumn ? 1 : 0;
+    
     // Create column definitions
-    const columns: ColumnDefinition[] = headers.map((header, index) => {
+    const columns: ColumnDefinition[] = headers.slice(startColumnIndex).map((header, index) => {
       const id = header.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       // Try to detect column type
       let type: 'text' | 'number' | 'currency' = 'text';
@@ -103,13 +107,20 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
     for (let i = 1; i < parsedData.length; i++) {
       const rowData: DataRow = {
         id: `row-${i-1}`,
-        color: '#ffffff' // default color
+        color: '#ffffff', // default color
+        locked: false
       };
+      
+      // Add index value if present
+      if (hasIndexColumn) {
+        rowData.indexValue = parsedData[i][0];
+      }
       
       // Map cells to columns
       columns.forEach((col, colIndex) => {
-        if (colIndex < parsedData[i].length) {
-          let value = parsedData[i][colIndex];
+        const dataIndex = colIndex + startColumnIndex;
+        if (dataIndex < parsedData[i].length) {
+          let value = parsedData[i][dataIndex];
           
           // Try to convert to appropriate type
           if (col.type === 'number') {

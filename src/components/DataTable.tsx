@@ -17,6 +17,9 @@ interface DataTableProps {
   indexColumnLocked: boolean;
   onToggleIndexColumnLock: () => void;
   theme: Theme;
+  showIndexColumn: boolean;
+  onToggleIndexColumn: () => void;
+  onIndexValueChange: (rowId: string, value: string) => void;
 }
 
 const DataTable: React.FC<DataTableProps> = ({
@@ -32,7 +35,10 @@ const DataTable: React.FC<DataTableProps> = ({
   onToggleRowLock,
   indexColumnLocked,
   onToggleIndexColumnLock,
-  theme
+  theme,
+  showIndexColumn,
+  onToggleIndexColumn,
+  onIndexValueChange
 }) => {
   // Format value based on column type
   const formatValue = (value: any, type: string): string => {
@@ -65,18 +71,29 @@ const DataTable: React.FC<DataTableProps> = ({
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              <div className="flex items-center justify-between">
-                <span>#</span>
-                <button
-                  onClick={onToggleIndexColumnLock}
-                  className={`ml-2 ${indexColumnLocked ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-800`}
-                  title={indexColumnLocked ? "Unlock index column" : "Lock index column"}
-                >
-                  {indexColumnLocked ? <Lock size={14} /> : <Unlock size={14} />}
-                </button>
-              </div>
-            </th>
+            {showIndexColumn && (
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="flex items-center justify-between">
+                  <span>#</span>
+                  <div className="flex items-center">
+                    <button
+                      onClick={onToggleIndexColumnLock}
+                      className={`ml-2 ${indexColumnLocked ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-800`}
+                      title={indexColumnLocked ? "Unlock index column" : "Lock index column"}
+                    >
+                      {indexColumnLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                    </button>
+                    <button
+                      onClick={onToggleIndexColumn}
+                      className="ml-2 text-red-500 hover:text-red-700"
+                      title="Hide index column"
+                    >
+                      <XCircle size={14} />
+                    </button>
+                  </div>
+                </div>
+              </th>
+            )}
             
             {columns.map((column, index) => (
               <React.Fragment key={column.id}>
@@ -140,18 +157,31 @@ const DataTable: React.FC<DataTableProps> = ({
         <tbody className="bg-white divide-y divide-gray-200">
           {data.map((row, rowIndex) => (
             <tr key={row.id} style={{ backgroundColor: row.color || '#ffffff' }}>
-              <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${indexColumnLocked || row.locked ? 'bg-gray-100' : ''}`}>
-                <div className="flex items-center">
-                  <span className="mr-2">{rowIndex + 1}</span>
-                  {row.locked && <Lock size={14} className="text-blue-600" />}
-                </div>
-              </td>
+              {showIndexColumn && (
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${indexColumnLocked || row.locked ? 'border-2 border-red-300' : ''}`}>
+                  <div className="flex items-center">
+                    <input
+                      type="text"
+                      value={row.indexValue || (rowIndex + 1).toString()}
+                      onChange={(e) => onIndexValueChange(row.id, e.target.value)}
+                      className={`w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:border-transparent ${
+                        indexColumnLocked || row.locked 
+                          ? 'border-red-300 focus:ring-red-500' 
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
+                      disabled={indexColumnLocked || row.locked}
+                      readOnly={indexColumnLocked || row.locked}
+                    />
+                    {row.locked && <Lock size={14} className="text-blue-600 ml-2" />}
+                  </div>
+                </td>
+              )}
               
               {columns.map((column, colIndex) => (
                 <React.Fragment key={`${row.id}-${column.id}`}>
                   {colIndex === 0 && <td className="w-10"></td>}
                   
-                  <td className={`px-6 py-4 whitespace-nowrap ${column.locked || row.locked ? 'bg-gray-100' : ''}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap ${column.locked || row.locked ? 'border-2 border-red-300' : ''}`}>
                     <input
                       type={column.type === 'number' || column.type === 'currency' ? 'number' : 'text'}
                       value={row[column.id] || ''}
@@ -163,7 +193,7 @@ const DataTable: React.FC<DataTableProps> = ({
                       }}
                       className={`w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:border-transparent ${
                         column.locked || row.locked 
-                          ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed' 
+                          ? 'border-red-300 focus:ring-red-500' 
                           : 'border-gray-300 focus:ring-blue-500'
                       }`}
                       placeholder={`Enter ${column.title.toLowerCase()}`}

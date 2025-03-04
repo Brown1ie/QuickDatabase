@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, Download, Trash2, Save, Database, Edit, FileUp, FileDown } from 'lucide-react';
+import { PlusCircle, Download, Trash2, Save, Database, Edit, FileUp, FileDown, Eye, EyeOff } from 'lucide-react';
 import DataTable from './components/DataTable';
 import Header from './components/Header';
 import PresetSelector from './components/PresetSelector';
@@ -27,6 +27,7 @@ export type DataRow = {
   id: string;
   color?: string;
   locked?: boolean;
+  indexValue?: string;
   [key: string]: any;
 };
 
@@ -66,6 +67,7 @@ function App() {
   const [isEditingTableName, setIsEditingTableName] = useState(false);
   const [rowColorOptions] = useState<string[]>(currentTheme.rowColorOptions);
   const [indexColumnLocked, setIndexColumnLocked] = useState(false);
+  const [showIndexColumn, setShowIndexColumn] = useState(true);
 
   // Handle preset selection
   const handlePresetSelect = (presetId: string) => {
@@ -85,6 +87,7 @@ function App() {
       });
       setData([emptyRow]);
       setIndexColumnLocked(false);
+      setShowIndexColumn(true);
     }
   };
 
@@ -147,6 +150,24 @@ function App() {
   const handleToggleIndexColumnLock = () => {
     setIndexColumnLocked(!indexColumnLocked);
     toast.success(`Index column ${!indexColumnLocked ? 'locked' : 'unlocked'}`);
+  };
+  
+  // Toggle index column visibility
+  const handleToggleIndexColumn = () => {
+    setShowIndexColumn(!showIndexColumn);
+    toast.success(`Index column ${showIndexColumn ? 'hidden' : 'shown'}`);
+  };
+  
+  // Handle index value change
+  const handleIndexValueChange = (rowId: string, value: string) => {
+    const updatedData = data.map(row => {
+      if (row.id === rowId) {
+        return { ...row, indexValue: value };
+      }
+      return row;
+    });
+    
+    setData(updatedData);
   };
 
   // Toggle row lock
@@ -289,7 +310,7 @@ function App() {
       return;
     }
     
-    generatePDF(columns, data, tableName);
+    generatePDF(columns, data, tableName, showIndexColumn);
     toast.success(`PDF exported as ${tableName}.pdf`);
   };
   
@@ -300,7 +321,7 @@ function App() {
       return;
     }
     
-    exportCSV(columns, data, tableName);
+    exportCSV(columns, data, tableName, showIndexColumn);
     toast.success(`CSV exported as ${tableName}.csv`);
   };
 
@@ -311,6 +332,7 @@ function App() {
     setData([]);
     setTableName('My Table');
     setIndexColumnLocked(false);
+    setShowIndexColumn(true);
     toast.success('Table reset');
   };
 
@@ -339,6 +361,7 @@ function App() {
     setColumns(importedColumns);
     setData(importedData);
     setIndexColumnLocked(false);
+    setShowIndexColumn(true);
   };
 
   return (
@@ -417,6 +440,18 @@ function App() {
                     }}
                   >
                     <PlusCircle size={16} className="mr-1" /> Add Row
+                  </button>
+                  <button
+                    onClick={handleToggleIndexColumn}
+                    className="flex items-center px-3 py-2 text-white rounded hover:opacity-90 transition-opacity"
+                    style={{ 
+                      backgroundColor: currentTheme.secondaryButtonBg,
+                      color: '#ffffff'
+                    }}
+                    title={showIndexColumn ? "Hide index column" : "Show index column"}
+                  >
+                    {showIndexColumn ? <EyeOff size={16} className="mr-1" /> : <Eye size={16} className="mr-1" />}
+                    {showIndexColumn ? "Hide #" : "Show #"}
                   </button>
                   <ImportButton onImport={handleImport} />
                   <div className="relative group">
@@ -510,6 +545,9 @@ function App() {
                 indexColumnLocked={indexColumnLocked}
                 onToggleIndexColumnLock={handleToggleIndexColumnLock}
                 theme={currentTheme}
+                showIndexColumn={showIndexColumn}
+                onToggleIndexColumn={handleToggleIndexColumn}
+                onIndexValueChange={handleIndexValueChange}
               />
             </div>
           )}

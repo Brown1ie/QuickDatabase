@@ -34,7 +34,12 @@ const lightenColor = (rgb: [number, number, number], factor: number = 0.9): [num
   ];
 };
 
-export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableName: string = 'Data Export') => {
+export const generatePDF = (
+  columns: ColumnDefinition[], 
+  data: DataRow[], 
+  tableName: string = 'Data Export',
+  includeIndexColumn: boolean = true
+) => {
   // Create a new PDF document
   const doc = new jsPDF();
   
@@ -56,13 +61,25 @@ export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableN
   doc.text(`Generated on: ${timestamp}`, 14, 30);
   
   // Format data for the table
-  const tableColumns = columns.map((column) => ({
-    header: column.title,
-    dataKey: column.id,
-  }));
+  const tableColumns = includeIndexColumn 
+    ? [{ header: '#', dataKey: 'index' }].concat(columns.map((column) => ({
+        header: column.title,
+        dataKey: column.id,
+      })))
+    : columns.map((column) => ({
+        header: column.title,
+        dataKey: column.id,
+      }));
   
-  const tableData = data.map((row) => {
+  const tableData = data.map((row, index) => {
     const rowData: Record<string, any> = {};
+    
+    // Add index column if needed
+    if (includeIndexColumn) {
+      rowData['index'] = row.indexValue || (index + 1).toString();
+    }
+    
+    // Add other columns
     columns.forEach((column) => {
       // Format the value based on column type
       if (column.type === 'currency' && row[column.id]) {
@@ -71,6 +88,10 @@ export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableN
         rowData[column.id] = row[column.id] || '';
       }
     });
+    
+    // Add color information
+    rowData.color = row.color || '#ffffff';
+    
     return rowData;
   });
   
@@ -78,9 +99,11 @@ export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableN
   doc.autoTable({
     startY: 40,
     head: [tableColumns.map((col) => col.header)],
-    body: tableData.map((row, index) => 
-      tableColumns.map((col) => row[col.dataKey])
-    ),
+    body: tableData.map((row) => {
+      // Remove color from the data array that goes to the table
+      const { color, ...rowData } = row;
+      return Object.values(rowData);
+    }),
     theme: 'grid',
     headStyles: {
       fillColor: [66, 133, 244],
@@ -90,34 +113,14 @@ export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableN
     // Use row colors from data
     didParseCell: function(data) {
       const rowIndex = data.row.index;
-      if (rowIndex >= 0 && rowIndex < data.table.body.length) {
-        const rowColor = data.row.raw?.color || data[rowIndex]?.color || '#ffffff';
+      if (rowIndex >= 0 && rowIndex < tableData.length) {
+        const rowColor = tableData[rowIndex].color || '#ffffff';
         if (data.section === 'body') {
           // Convert hex color to RGB and lighten it for better readability
           const rgb = lightenColor(hexToRgb(rowColor));
           data.cell.styles.fillColor = rgb;
         }
       }
-    },
-    // Add row colors
-    willDrawCell: function(data) {
-      if (data.section === 'body') {
-        const rowIndex = data.row.index;
-        const originalRow = data.row.index < data.length ? data[rowIndex] : null;
-        if (originalRow && originalRow.color && originalRow.color !== '#ffffff') {
-          const rgb = lightenColor(hexToRgb(originalRow.color));
-          data.cell.styles.fillColor = rgb;
-        }
-      }
-    },
-    // Map row data to include color information
-    rowStyles: function(row, rowIndex) {
-      const originalRow = data[rowIndex];
-      if (originalRow && originalRow.color && originalRow.color !== '#ffffff') {
-        const rgb = lightenColor(hexToRgb(originalRow.color));
-        return { fillColor: rgb };
-      }
-      return {};
     },
     alternateRowStyles: {
       fillColor: [240, 240, 240],
@@ -131,13 +134,28 @@ export const generatePDF = (columns: ColumnDefinition[], data: DataRow[], tableN
 };
 
 // Export CSV function
-export const exportCSV = (columns: ColumnDefinition[], data: DataRow[], tableName: string = 'Data Export') => {
+export const exportCSV = (
+  columns: ColumnDefinition[], 
+  data: DataRow[], 
+  tableName: string = 'Data Export',
+  includeIndexColumn: boolean = true
+) => {
   // Create CSV header row
-  const headerRow = columns.map(col => `"${col.title}"`).join(',');
+  let headers = includeIndexColumn ? ['#'] : [];
+  headers = headers.concat(columns.map(col => col.title));
+  const headerRow = headers.map(header => `"${header}"`).join(',');
   
   // Create CSV data rows
-  const dataRows = data.map(row => {
-    return columns.map(col => {
+  const dataRows = data.map((row, index) => {
+    let values = [];
+    
+    // Add index column if needed
+    if (includeIndexColumn) {
+      values.push(`"${row.indexValue || (index + 1)}"`);
+    }
+    
+    // Add other columns
+    values = values.concat(columns.map(col => {
       let value = row[col.id] || '';
       
       // Format currency values
@@ -147,7 +165,9 @@ export const exportCSV = (columns: ColumnDefinition[], data: DataRow[], tableNam
       
       // Escape quotes and wrap in quotes
       return `"${String(value).replace(/"/g, '""')}"`;
-    }).join(',');
+    }));
+    
+    return values.join(',');
   });
   
   // Combine all rows
