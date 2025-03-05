@@ -32,7 +32,7 @@ export type DataRow = {
 };
 
 function App() {
-  const { currentTheme } = useTheme();
+  const { currentTheme, setTheme, themes } = useTheme();
   
   // Predefined presets
   const presets: Preset[] = [
@@ -310,7 +310,7 @@ function App() {
       return;
     }
     
-    generatePDF(columns, data, tableName, showIndexColumn);
+    generatePDF(columns, data, tableName, showIndexColumn, currentTheme.headerGradientFrom);
     toast.success(`PDF exported as ${tableName}.pdf`);
   };
   
@@ -321,7 +321,7 @@ function App() {
       return;
     }
     
-    exportCSV(columns, data, tableName, showIndexColumn);
+    exportCSV(columns, data, tableName, showIndexColumn, currentTheme.id);
     toast.success(`CSV exported as ${tableName}.csv`);
   };
 
@@ -355,13 +355,21 @@ function App() {
   };
 
   // Handle data import
-  const handleImport = (importedTableName: string, importedColumns: ColumnDefinition[], importedData: DataRow[]) => {
+  const handleImport = (importedTableName: string, importedColumns: ColumnDefinition[], importedData: DataRow[], importedThemeId?: string) => {
     setSelectedPreset(null); // Switch to custom mode
     setTableName(importedTableName);
     setColumns(importedColumns);
     setData(importedData);
     setIndexColumnLocked(false);
     setShowIndexColumn(true);
+    
+    // Set theme if one was included in the import
+    if (importedThemeId) {
+      const theme = themes.find(t => t.id === importedThemeId);
+      if (theme) {
+        setTheme(importedThemeId);
+      }
+    }
   };
 
   return (
@@ -374,7 +382,7 @@ function App() {
       <main className="container mx-auto px-4 py-8">
         <div 
           className="rounded-lg shadow-md p-6 mb-8"
-          style={{ backgroundColor: '#ffffff' }}
+          style={{ backgroundColor: currentTheme.tableBackgroundColor }}
         >
           <h2 
             className="text-xl font-semibold mb-4"

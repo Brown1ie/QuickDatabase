@@ -29,7 +29,8 @@ export const generatePDF = (
   columns: ColumnDefinition[], 
   data: DataRow[], 
   tableName: string = 'Data Export',
-  includeIndexColumn: boolean = true
+  includeIndexColumn: boolean = true,
+  headerColor: string = '#2563eb'
 ) => {
   // Create a new PDF document
   const doc = new jsPDF();
@@ -85,6 +86,9 @@ export const generatePDF = (
     
     return rowData;
   });
+
+  // Convert header color to RGB
+  const headerRgb = hexToRgb(headerColor);
   
   // Generate the table with row colors
   doc.autoTable({
@@ -97,7 +101,7 @@ export const generatePDF = (
     }),
     theme: 'grid',
     headStyles: {
-      fillColor: [66, 133, 244],
+      fillColor: headerRgb,
       textColor: 255,
       fontStyle: 'bold',
     },
@@ -129,11 +133,14 @@ export const exportCSV = (
   columns: ColumnDefinition[], 
   data: DataRow[], 
   tableName: string = 'Data Export',
-  includeIndexColumn: boolean = true
+  includeIndexColumn: boolean = true,
+  themeId: string = 'default'
 ) => {
   // Create CSV header row
   let headers = includeIndexColumn ? ['#'] : [];
   headers = headers.concat(columns.map(col => col.title));
+  headers.push('_color'); // Add color column
+  headers.push('_theme'); // Add theme column
   const headerRow = headers.map(header => `"${header}"`).join(',');
   
   // Create CSV data rows
@@ -157,6 +164,10 @@ export const exportCSV = (
       // Escape quotes and wrap in quotes
       return `"${String(value).replace(/"/g, '""')}"`;
     }));
+
+    // Add color and theme information
+    values.push(`"${row.color || '#ffffff'}"`);
+    values.push(`"${themeId}"`);
     
     return values.join(',');
   });

@@ -3,6 +3,8 @@ export interface Theme {
     name: string;
     // Main background color
     backgroundColor: string;
+    // Table background color
+    tableBackgroundColor: string;
     // Header gradient colors
     headerGradientFrom: string;
     headerGradientTo: string;
@@ -25,6 +27,7 @@ export interface Theme {
     id: 'default',
     name: 'Default Blue',
     backgroundColor: '#f9fafb', // light gray
+    tableBackgroundColor: '#ffffff', // white
     headerGradientFrom: '#2563eb', // blue-600
     headerGradientTo: '#4338ca', // indigo-700
     headerTextColor: '#ffffff', // white
@@ -50,10 +53,11 @@ export interface Theme {
     id: 'dark',
     name: 'Dark Mode',
     backgroundColor: '#111827', // gray-900
+    tableBackgroundColor: '#1f2937', // gray-800
     headerGradientFrom: '#1e3a8a', // blue-900
     headerGradientTo: '#312e81', // indigo-900
     headerTextColor: '#f3f4f6', // gray-100
-    textColor: '#1f2937', // gray-800
+    textColor: '#e5e7eb', // gray-200
     primaryButtonBg: '#3b82f6', // blue-500
     primaryButtonHoverBg: '#2563eb', // blue-600
     secondaryButtonBg: '#10b981', // green-500
@@ -75,6 +79,7 @@ export interface Theme {
     id: 'purple',
     name: 'Purple Passion',
     backgroundColor: '#f5f3ff', // purple-50
+    tableBackgroundColor: '#faf5ff', // purple-50 slightly lighter
     headerGradientFrom: '#7c3aed', // purple-600
     headerGradientTo: '#c026d3', // fuchsia-600
     headerTextColor: '#ffffff', // white
@@ -100,6 +105,7 @@ export interface Theme {
     id: 'nature',
     name: 'Natural Green',
     backgroundColor: '#f0fdf4', // green-50
+    tableBackgroundColor: '#ecfdf5', // green-50 slightly different
     headerGradientFrom: '#16a34a', // green-600
     headerGradientTo: '#0d9488', // teal-600
     headerTextColor: '#ffffff', // white

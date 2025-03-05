@@ -6,6 +6,7 @@ export interface ImportResult {
   data: DataRow[];
   success: boolean;
   error?: string;
+  themeId?: string;
 }
 
 // Simple CSV parser function
@@ -76,32 +77,42 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
     // Check if the first column is an index column
     const hasIndexColumn = headers[0] === '#';
     const startColumnIndex = hasIndexColumn ? 1 : 0;
+
+    // Check for color and theme columns
+    const hasColorColumn = headers.includes('_color');
+    const hasThemeColumn = headers.includes('_theme');
+    const colorColumnIndex = headers.indexOf('_color');
+    const themeColumnIndex = headers.indexOf('_theme');
     
-    // Create column definitions
-    const columns: ColumnDefinition[] = headers.slice(startColumnIndex).map((header, index) => {
-      const id = header.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      // Try to detect column type
-      let type: 'text' | 'number' | 'currency' = 'text';
-      
-      if (header.toLowerCase().includes('price') || 
-          header.toLowerCase().includes('cost') || 
-          header.toLowerCase().includes('$')) {
-        type = 'currency';
-      } else if (header.toLowerCase().includes('rating') || 
-                header.toLowerCase().includes('count') || 
-                header.toLowerCase().includes('number')) {
-        type = 'number';
-      }
-      
-      return {
-        id: id || `column-${index}`,
-        title: header,
-        type
-      };
-    });
+    // Create column definitions (excluding special columns)
+    const columns: ColumnDefinition[] = headers
+      .slice(startColumnIndex)
+      .filter(header => header !== '_color' && header !== '_theme')
+      .map((header, index) => {
+        const id = header.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        // Try to detect column type
+        let type: 'text' | 'number' | 'currency' = 'text';
+        
+        if (header.toLowerCase().includes('price') || 
+            header.toLowerCase().includes('cost') || 
+            header.toLowerCase().includes('$')) {
+          type = 'currency';
+        } else if (header.toLowerCase().includes('rating') || 
+                  header.toLowerCase().includes('count') || 
+                  header.toLowerCase().includes('number')) {
+          type = 'number';
+        }
+        
+        return {
+          id: id || `column-${index}`,
+          title: header,
+          type
+        };
+      });
     
     // Extract data rows
     const data: DataRow[] = [];
+    let importedThemeId: string | undefined;
     
     // Start from the second row (index 1)
     for (let i = 1; i < parsedData.length; i++) {
@@ -116,11 +127,11 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
         rowData.indexValue = parsedData[i][0];
       }
       
-      // Map cells to columns
-      columns.forEach((col, colIndex) => {
-        const dataIndex = colIndex + startColumnIndex;
-        if (dataIndex < parsedData[i].length) {
-          let value = parsedData[i][dataIndex];
+      // Map cells to columns (excluding special columns)
+      let colIndex = startColumnIndex;
+      columns.forEach((col) => {
+        if (colIndex !== colorColumnIndex && colIndex !== themeColumnIndex) {
+          let value = parsedData[i][colIndex];
           
           // Try to convert to appropriate type
           if (col.type === 'number') {
@@ -137,7 +148,18 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
           
           rowData[col.id] = value;
         }
+        colIndex++;
       });
+
+      // Add color if present
+      if (hasColorColumn) {
+        rowData.color = parsedData[i][colorColumnIndex].replace(/"/g, '') || '#ffffff';
+      }
+
+      // Get theme if present
+      if (hasThemeColumn && !importedThemeId) {
+        importedThemeId = parsedData[i][themeColumnIndex].replace(/"/g, '');
+      }
       
       data.push(rowData);
     }
@@ -146,7 +168,8 @@ export const importPDF = async (file: File): Promise<ImportResult> => {
       tableName,
       columns,
       data,
-      success: true
+      success: true,
+      themeId: importedThemeId
     };
   } catch (error) {
     console.error('Error importing file:', error);
